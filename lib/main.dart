@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 void main() {
   runApp(const MyApp());
@@ -7,12 +9,11 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'digital diary v0.01',
+      title: 'Digital Diary v0.01',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.lightGreenAccent),
         useMaterial3: true,
@@ -32,12 +33,57 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  List<File> _images = [];
+  final ImagePicker _picker = ImagePicker();
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
+  Future<void> _pickImage(ImageSource source) async {
+    final pickedFile = await _picker.pickImage(source: source);
+
+    if (pickedFile != null) {
+      setState(() {
+        _images.add(File(pickedFile.path));
+      });
+    }
+  }
+
+  void _showPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext bc) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Photo Library'),
+                onTap: () {
+                  _pickImage(ImageSource.gallery);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Camera'),
+                onTap: () {
+                  _pickImage(ImageSource.camera);
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _processImages(BuildContext context) {
+    // Add your processing logic here
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Processing started...'),
+      ),
+    );
+    print('Processing ${_images.length} images');
   }
 
   @override
@@ -49,27 +95,37 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Center(
         child: Column(
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             const Text('Take your handwritten notes online!'),
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            const SizedBox(height: 20),
+            _images.isNotEmpty
+                ? Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: _images.map((image) {
+                      return Image.file(
+                        image,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      );
+                    }).toList(),
+                  )
+                : const Text('No image selected.'),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => _processImages(context),
+              child: const Text('Process'),
             ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+        onPressed: () => _showPicker(context),
+        tooltip: 'Pick Image',
+        child: const Icon(Icons.camera_alt),
+      ),
     );
   }
 }
